@@ -1,8 +1,8 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MEALS } from "../../data/meals";
 import { getMealCalories, type Food } from "../../models/meal";
+import { useMeals } from "../../state/meals-context";
 
 const NUTRI_SCORE_COLORS: Record<string, string> = {
   a: "#1f9d53",
@@ -65,9 +65,10 @@ const FoodCard = ({ food }: { food: Food }) => {
 
 export default function MealDetailsPage() {
   const router = useRouter();
+  const { meals } = useMeals();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const mealId = Array.isArray(params.id) ? params.id[0] : params.id;
-  const meal = MEALS.find((item) => item.id === mealId);
+  const meal = meals.find((item) => item.id === mealId);
 
   if (!meal) {
     return (

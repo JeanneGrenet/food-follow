@@ -1,10 +1,12 @@
 import { Link } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MEALS } from "../../data/meals";
 import { getMealCalories } from "../../models/meal";
+import { useMeals } from "../../state/meals-context";
 
 export default function HomePage() {
+  const { meals } = useMeals();
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.header}>
@@ -12,7 +14,7 @@ export default function HomePage() {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {MEALS.map((meal) => (
+        {meals.map((meal) => (
           <Link
             key={meal.id}
             href={{ pathname: "/(main)/(home)/[id]", params: { id: meal.id } }}
