@@ -1,4 +1,5 @@
 import { useAuth } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import { Redirect, useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -20,9 +21,18 @@ import {
 import { useMeals } from "../../state/meals-context";
 import { consumePendingScannedFood } from "../../state/pending-scanned-food";
 import { palette, radius } from "../../theme";
-import { Ionicons } from "@expo/vector-icons";
 
 const MEAL_TYPES = ["Petit-dejeuner", "Dejeuner", "Diner", "Snack"] as const;
+
+const TYPE_VISUALS: Record<
+  (typeof MEAL_TYPES)[number],
+  { icon: keyof typeof Ionicons.glyphMap; color: string }
+> = {
+  "Petit-dejeuner": { icon: "sunny-outline", color: "#d97706" },
+  Dejeuner: { icon: "restaurant-outline", color: "#2563eb" },
+  Diner: { icon: "moon-outline", color: "#6d28d9" },
+  Snack: { icon: "cafe-outline", color: "#ea580c" },
+};
 
 export default function AddMealPage() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -54,7 +64,7 @@ export default function AddMealPage() {
       const scannedFood = consumePendingScannedFood();
       if (scannedFood) {
         addFoodToSelection(scannedFood);
-        setScanMessage(`Aliment ajoute via scan: ${scannedFood.name}`);
+        setScanMessage(`Aliment ajouté via scan: ${scannedFood.name}`);
         setSearchText("");
         setResults([]);
         setSearchError(null);
@@ -108,7 +118,7 @@ export default function AddMealPage() {
     const alreadySelected = selectedFoods.some((item) => item.id === food.id);
 
     if (alreadySelected) {
-      setScanMessage(`${food.name} est deja dans le repas.`);
+      setScanMessage(`${food.name} est déjà dans le repas.`);
       setSearchText("");
       setResults([]);
       setSearchError(null);
@@ -116,7 +126,7 @@ export default function AddMealPage() {
     }
 
     addFoodToSelection(food);
-    setScanMessage(`Aliment ajoute: ${food.name}`);
+    setScanMessage(`Aliment ajouté: ${food.name}`);
     setSearchText("");
     setResults([]);
     setSearchError(null);
@@ -160,28 +170,58 @@ export default function AddMealPage() {
       <ScrollView
         contentContainerStyle={styles.container}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerCard}>
-          <Text style={styles.title}>Ajouter un repas</Text>
-          <Text style={styles.subtitle}>Compose ton repas en 2 étapes</Text>
+          <View style={styles.headerIconWrap}>
+            <Ionicons
+              name="sparkles-outline"
+              size={20}
+              color={palette.primary}
+            />
+          </View>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.title}>Ajouter un repas</Text>
+            <Text style={styles.subtitle}>
+              Compose ton repas en 2 étapes simples
+            </Text>
+          </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1. Type de repas</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionIndex}>1</Text>
+            <Text style={styles.sectionTitle}>Choisir le type de repas</Text>
+          </View>
+
           <View style={styles.chips}>
             {MEAL_TYPES.map((type) => {
               const selected = type === mealType;
+              const visual = TYPE_VISUALS[type];
+
               return (
                 <Pressable
                   key={type}
-                  style={[styles.chip, selected && styles.chipSelected]}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected && {
+                      backgroundColor: `${visual.color}22`,
+                      borderColor: visual.color,
+                    },
+                    pressed && styles.chipPressed,
+                  ]}
                   onPress={() => setMealType(type)}
                 >
+                  <Ionicons
+                    name={visual.icon}
+                    size={15}
+                    color={selected ? visual.color : palette.textMuted}
+                  />
                   <Text
                     style={[
                       styles.chipText,
-                      selected && styles.chipTextSelected,
+                      selected && { color: visual.color, fontWeight: "800" },
                     ]}
                   >
                     {type}
@@ -193,10 +233,13 @@ export default function AddMealPage() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>2. Ajouter des aliments</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionIndex}>2</Text>
+            <Text style={styles.sectionTitle}>Ajouter des aliments</Text>
+          </View>
 
           <View style={styles.searchWrap}>
-            <Ionicons name={"search"} />
+            <Ionicons name="search" size={16} color={palette.textMuted} />
             <TextInput
               style={styles.input}
               value={searchText}
@@ -206,11 +249,22 @@ export default function AddMealPage() {
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {searchText.length > 0 ? (
+              <Pressable
+                onPress={() => {
+                  setSearchText("");
+                  setResults([]);
+                  setSearchError(null);
+                }}
+              >
+                <Ionicons
+                  name="close-circle"
+                  size={18}
+                  color={palette.textMuted}
+                />
+              </Pressable>
+            ) : null}
           </View>
-
-          <Text style={styles.helperText}>
-            Debounce actif pour respecter la limite API.
-          </Text>
 
           {isSearching ? (
             <View style={styles.inlineInfo}>
@@ -220,8 +274,16 @@ export default function AddMealPage() {
           ) : null}
 
           {scanMessage ? (
-            <Text style={styles.successText}>{scanMessage}</Text>
+            <View style={styles.feedbackBanner}>
+              <Ionicons
+                name="checkmark-circle"
+                size={16}
+                color={palette.primary}
+              />
+              <Text style={styles.successText}>{scanMessage}</Text>
+            </View>
           ) : null}
+
           {searchError ? (
             <Text style={styles.errorText}>{searchError}</Text>
           ) : null}
@@ -233,6 +295,7 @@ export default function AddMealPage() {
             ]}
             onPress={() => router.push("/add/camera")}
           >
+            <Ionicons name="scan-outline" size={16} color="#ffffff" />
             <Text style={styles.scanButtonText}>Scanner un code-barres</Text>
           </Pressable>
 
@@ -251,7 +314,10 @@ export default function AddMealPage() {
                   {result.brand ?? "Marque inconnue"}
                 </Text>
               </View>
-              <Text style={styles.resultAction}>+</Text>
+
+              <View style={styles.resultActionBubble}>
+                <Ionicons name="add" size={16} color="#ffffff" />
+              </View>
             </Pressable>
           ))}
         </View>
@@ -259,12 +325,23 @@ export default function AddMealPage() {
         <View style={styles.section}>
           <View style={styles.selectedHeader}>
             <Text style={styles.sectionTitle}>Aliments du repas</Text>
-            <Text style={styles.sectionMeta}>{selectedFoods.length}</Text>
+            <View style={styles.selectedCountBubble}>
+              <Text style={styles.selectedCountText}>
+                {selectedFoods.length}
+              </Text>
+            </View>
           </View>
 
           {selectedFoods.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Aucun aliment ajouté</Text>
+              <Ionicons
+                name="nutrition-outline"
+                size={18}
+                color={palette.textMuted}
+              />
+              <Text style={styles.emptyText}>
+                Aucun aliment ajouté pour le moment
+              </Text>
             </View>
           ) : (
             selectedFoods.map((food) => (
@@ -277,10 +354,13 @@ export default function AddMealPage() {
                   </Text>
                 </View>
                 <Pressable
-                  style={styles.removeButton}
+                  style={({ pressed }) => [
+                    styles.removeButton,
+                    pressed && styles.removeButtonPressed,
+                  ]}
                   onPress={() => onRemoveFood(food.id)}
                 >
-                  <Text style={styles.removeButtonText}>x</Text>
+                  <Ionicons name="close" size={13} color="#ffffff" />
                 </Pressable>
               </View>
             ))
@@ -296,6 +376,7 @@ export default function AddMealPage() {
           ]}
           onPress={onSaveMeal}
         >
+          <Ionicons name="checkmark-circle-outline" size={17} color="#ffffff" />
           <Text style={styles.submitButtonText}>Valider le repas</Text>
         </Pressable>
       </ScrollView>
@@ -318,12 +399,26 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: palette.border,
-    padding: 16,
-    gap: 2,
+    padding: 14,
+    gap: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.backgroundMuted,
+  },
+  headerTextWrap: {
+    flex: 1,
+    gap: 1,
   },
   title: {
     color: palette.text,
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: "800",
   },
   subtitle: {
@@ -337,6 +432,22 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     padding: 12,
     gap: 10,
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  sectionIndex: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    textAlign: "center",
+    lineHeight: 20,
+    color: "#ffffff",
+    backgroundColor: palette.primary,
+    fontWeight: "700",
+    fontSize: 12,
   },
   sectionTitle: {
     color: palette.text,
@@ -353,23 +464,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 11,
     backgroundColor: palette.surfaceSoft,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
   },
-  chipSelected: {
-    backgroundColor: palette.primary,
-    borderColor: palette.primary,
+  chipPressed: {
+    opacity: 0.82,
   },
   chipText: {
     color: palette.text,
     fontWeight: "700",
     fontSize: 13,
-  },
-  chipTextSelected: {
-    color: "#ffffff",
   },
   searchWrap: {
     borderWidth: 1,
@@ -380,11 +487,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  searchPrefix: {
-    color: palette.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
   },
   input: {
     flex: 1,
@@ -404,12 +506,36 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 13,
   },
+  feedbackBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: "#eaf8ef",
+    borderWidth: 1,
+    borderColor: "#b6e1c4",
+  },
+  successText: {
+    color: palette.primary,
+    fontSize: 12,
+    fontWeight: "700",
+    flex: 1,
+  },
+  errorText: {
+    color: palette.danger,
+    fontSize: 13,
+    fontWeight: "600",
+  },
   scanButton: {
     borderRadius: radius.md,
     height: 44,
     backgroundColor: palette.accent,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
   },
   scanButtonPressed: {
     opacity: 0.86,
@@ -432,7 +558,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   resultItemPressed: {
-    opacity: 0.8,
+    opacity: 0.82,
   },
   resultTextWrap: {
     flex: 1,
@@ -447,21 +573,34 @@ const styles = StyleSheet.create({
     color: palette.textMuted,
     fontSize: 12,
   },
-  resultAction: {
-    color: palette.primary,
-    fontWeight: "700",
-    fontSize: 22,
-    lineHeight: 22,
+  resultActionBubble: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.primary,
   },
   selectedHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  sectionMeta: {
+  selectedCountBubble: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    backgroundColor: palette.backgroundMuted,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  selectedCountText: {
     color: palette.primary,
     fontWeight: "800",
-    fontSize: 14,
+    fontSize: 12,
   },
   emptyState: {
     borderRadius: radius.md,
@@ -469,10 +608,14 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
     backgroundColor: palette.surfaceSoft,
     padding: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   emptyText: {
     color: palette.textMuted,
     fontSize: 13,
+    flex: 1,
   },
   selectedRow: {
     flexDirection: "row",
@@ -505,22 +648,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: palette.danger,
   },
-  removeButtonText: {
-    color: "#ffffff",
-    fontWeight: "700",
-    fontSize: 13,
-    lineHeight: 14,
-  },
-  errorText: {
-    color: palette.danger,
-    fontSize: 13,
-    fontWeight: "600",
-    marginTop: -2,
-  },
-  successText: {
-    color: palette.primary,
-    fontSize: 13,
-    fontWeight: "600",
+  removeButtonPressed: {
+    opacity: 0.82,
   },
   submitButton: {
     borderRadius: radius.lg,
@@ -528,6 +657,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: palette.primary,
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: palette.shadow,
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   submitButtonPressed: {
     backgroundColor: palette.primaryPressed,

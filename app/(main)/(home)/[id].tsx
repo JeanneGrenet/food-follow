@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   Alert,
@@ -21,23 +22,61 @@ const NUTRI_SCORE_COLORS: Record<string, string> = {
   e: "#e64949",
 };
 
-const MacroChip = ({
+const getMealVisual = (mealName: string) => {
+  const normalized = mealName.toLowerCase();
+
+  if (normalized.includes("petit")) {
+    return {
+      icon: "sunny-outline" as const,
+      accent: "#d97706",
+      soft: "#fff7e8",
+      border: "#f7d6a5",
+    };
+  }
+
+  if (normalized.includes("dejeuner")) {
+    return {
+      icon: "restaurant-outline" as const,
+      accent: "#2563eb",
+      soft: "#edf4ff",
+      border: "#cfe0ff",
+    };
+  }
+
+  if (normalized.includes("diner")) {
+    return {
+      icon: "moon-outline" as const,
+      accent: "#6d28d9",
+      soft: "#f5f0ff",
+      border: "#dfd2ff",
+    };
+  }
+
+  return {
+    icon: "cafe-outline" as const,
+    accent: "#ea580c",
+    soft: "#fff2e7",
+    border: "#ffd5bc",
+  };
+};
+
+const MacroTile = ({
+  icon,
   label,
   value,
   color,
 }: {
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   value: string;
   color: string;
 }) => (
-  <View
-    style={[
-      styles.metricBox,
-      { borderColor: color + "60", backgroundColor: color + "12" },
-    ]}
-  >
-    <Text style={[styles.metricValue, { color }]}>{value}</Text>
-    <Text style={styles.metricLabel}>{label}</Text>
+  <View style={[styles.macroTile, { borderColor: `${color}55`, backgroundColor: `${color}15` }]}>
+    <View style={[styles.macroIconWrap, { backgroundColor: `${color}22` }]}>
+      <Ionicons name={icon} size={13} color={color} />
+    </View>
+    <Text style={[styles.macroValue, { color }]}>{value}</Text>
+    <Text style={styles.macroLabel}>{label}</Text>
   </View>
 );
 
@@ -53,15 +92,13 @@ const FoodCard = ({ food }: { food: Food }) => {
             <Image source={{ uri: food.image_url }} style={styles.foodImage} />
           ) : (
             <View style={[styles.foodImage, styles.foodImagePlaceholder]}>
-              <Text style={styles.imagePlaceholderText}>IMG</Text>
+              <Ionicons name="image-outline" size={15} color={palette.textMuted} />
             </View>
           )}
 
           <View style={styles.foodTextWrap}>
             <Text style={styles.foodName}>{food.name}</Text>
-            <Text style={styles.foodBrand}>
-              {food.brand || "Marque inconnue"}
-            </Text>
+            <Text style={styles.foodBrand}>{food.brand || "Marque inconnue"}</Text>
           </View>
         </View>
 
@@ -70,19 +107,19 @@ const FoodCard = ({ food }: { food: Food }) => {
         </View>
       </View>
 
-      <View style={styles.metricsRow}>
-        <MacroChip
-          label="Calories"
-          value={`${food.calories} kcal`}
-          color="#2f9e62"
-        />
-        <MacroChip
-          label="Protéines"
-          value={`${food.proteins} g`}
-          color="#2563eb"
-        />
-        <MacroChip label="Glucides" value={`${food.carbs} g`} color="#d97706" />
-        <MacroChip label="Lipides" value={`${food.fats} g`} color="#dc2626" />
+      <View style={styles.foodMetricsRow}>
+        <View style={[styles.foodMetricPill, styles.foodMetricGreen]}>
+          <Text style={styles.foodMetricText}>{food.calories} kcal</Text>
+        </View>
+        <View style={[styles.foodMetricPill, styles.foodMetricBlue]}>
+          <Text style={styles.foodMetricText}>{food.proteins} g P</Text>
+        </View>
+        <View style={[styles.foodMetricPill, styles.foodMetricOrange]}>
+          <Text style={styles.foodMetricText}>{food.carbs} g G</Text>
+        </View>
+        <View style={[styles.foodMetricPill, styles.foodMetricRed]}>
+          <Text style={styles.foodMetricText}>{food.fats} g L</Text>
+        </View>
       </View>
     </View>
   );
@@ -97,14 +134,12 @@ export default function MealDetailsPage() {
 
   if (!meal) {
     return (
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={["top", "left", "right", "bottom"]}
-      >
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
         <View style={styles.notFoundWrap}>
+          <Ionicons name="alert-circle-outline" size={28} color={palette.textMuted} />
           <Text style={styles.notFoundTitle}>Repas introuvable</Text>
           <Pressable
-            style={styles.backListButton}
+            style={({ pressed }) => [styles.backListButton, pressed && styles.backListButtonPressed]}
             onPress={() => router.replace("/(main)/(home)")}
           >
             <Text style={styles.backListButtonText}>Retour à mes repas</Text>
@@ -125,6 +160,8 @@ export default function MealDetailsPage() {
     { calories: 0, proteins: 0, carbs: 0, fats: 0 }
   );
 
+  const visual = getMealVisual(meal.name);
+
   const onDeleteMeal = () => {
     Alert.alert("Supprimer ce repas", "Confirmer la suppression ?", [
       { text: "Annuler", style: "cancel" },
@@ -140,13 +177,13 @@ export default function MealDetailsPage() {
   };
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      edges={["top", "left", "right", "bottom"]}
-    >
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.iconButton}>
-          <Text style={styles.iconButtonText}>{"<"}</Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.iconButtonPressed]}
+        >
+          <Ionicons name="chevron-back" size={18} color={palette.text} />
         </Pressable>
 
         <Text style={styles.headerTitle}>Détail du repas</Text>
@@ -157,35 +194,38 @@ export default function MealDetailsPage() {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.mealHeadCard}>
-          <Text style={styles.title}>{meal.name}</Text>
-          <Text style={styles.subtitle}>{meal.date}</Text>
-          <Text style={styles.totalKcal}>{getMealCalories(meal)} kcal</Text>
+        <View
+          style={[
+            styles.mealHeadCard,
+            { backgroundColor: visual.soft, borderColor: visual.border },
+          ]}
+        >
+          <View style={styles.mealHeadTop}>
+            <View style={[styles.mealTypeIcon, { backgroundColor: `${visual.accent}22` }]}>
+              <Ionicons name={visual.icon} size={19} color={visual.accent} />
+            </View>
+
+            <View style={styles.mealHeadTextWrap}>
+              <Text style={styles.title}>{meal.name}</Text>
+              <Text style={styles.subtitle}>{meal.date}</Text>
+            </View>
+          </View>
+
+          <View style={styles.mealHeadBottom}>
+            <Text style={[styles.totalKcal, { color: visual.accent }]}>
+              {getMealCalories(meal)} kcal
+            </Text>
+            <Text style={styles.mealHeadBottomMeta}>{meal.foods.length} aliments</Text>
+          </View>
         </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Total nutritionnel</Text>
-          <View style={styles.metricsRow}>
-            <MacroChip
-              label="Calories"
-              value={`${totals.calories} kcal`}
-              color="#2f9e62"
-            />
-            <MacroChip
-              label="Protéines"
-              value={`${totals.proteins} g`}
-              color="#2563eb"
-            />
-            <MacroChip
-              label="Glucides"
-              value={`${totals.carbs} g`}
-              color="#d97706"
-            />
-            <MacroChip
-              label="Lipides"
-              value={`${totals.fats} g`}
-              color="#dc2626"
-            />
+          <View style={styles.macroGrid}>
+            <MacroTile icon="flame-outline" label="Calories" value={`${totals.calories} kcal`} color="#2f9e62" />
+            <MacroTile icon="barbell-outline" label="Protéines" value={`${totals.proteins} g`} color="#2563eb" />
+            <MacroTile icon="leaf-outline" label="Glucides" value={`${totals.carbs} g`} color="#d97706" />
+            <MacroTile icon="water-outline" label="Lipides" value={`${totals.fats} g`} color="#dc2626" />
           </View>
         </View>
 
@@ -196,21 +236,18 @@ export default function MealDetailsPage() {
 
         {meal.foods.length === 0 ? (
           <View style={styles.emptyCard}>
-            <Text style={styles.emptyText}>
-              Ce repas ne contient pas encore d'aliments.
-            </Text>
+            <Ionicons name="nutrition-outline" size={19} color={palette.textMuted} />
+            <Text style={styles.emptyText}>Ce repas ne contient pas encore d'aliments.</Text>
           </View>
         ) : (
           meal.foods.map((food) => <FoodCard key={food.id} food={food} />)
         )}
 
         <Pressable
-          style={({ pressed }) => [
-            styles.deleteButton,
-            pressed && styles.deleteButtonPressed,
-          ]}
+          style={({ pressed }) => [styles.deleteButton, pressed && styles.deleteButtonPressed]}
           onPress={onDeleteMeal}
         >
+          <Ionicons name="trash-outline" size={16} color="#ffffff" />
           <Text style={styles.deleteButtonText}>Supprimer ce repas</Text>
         </Pressable>
       </ScrollView>
@@ -232,23 +269,21 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   iconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: palette.surface,
     borderWidth: 1,
     borderColor: palette.border,
   },
-  iconButtonText: {
-    color: palette.text,
-    fontSize: 18,
-    fontWeight: "700",
+  iconButtonPressed: {
+    opacity: 0.8,
   },
   iconButtonGhost: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
   },
   headerTitle: {
     color: palette.text,
@@ -261,27 +296,49 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   mealHeadCard: {
-    backgroundColor: palette.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: palette.border,
-    padding: 16,
-    gap: 3,
+    padding: 14,
+    gap: 12,
+  },
+  mealHeadTop: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  mealTypeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mealHeadTextWrap: {
+    flex: 1,
   },
   title: {
     color: palette.text,
-    fontSize: 27,
+    fontSize: 25,
     fontWeight: "800",
   },
   subtitle: {
     color: palette.textMuted,
     fontSize: 13,
+    marginTop: 1,
+  },
+  mealHeadBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "baseline",
   },
   totalKcal: {
-    marginTop: 4,
-    color: palette.primary,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "800",
+  },
+  mealHeadBottomMeta: {
+    color: palette.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
   },
   sectionCard: {
     backgroundColor: palette.surface,
@@ -289,7 +346,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: palette.border,
     padding: 12,
-    gap: 8,
+    gap: 9,
   },
   sectionTitle: {
     color: palette.text,
@@ -307,24 +364,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 2,
   },
-  metricsRow: {
+  macroGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
   },
-  metricBox: {
-    minWidth: 78,
+  macroTile: {
+    minWidth: 76,
     borderWidth: 1,
     borderRadius: radius.md,
+    paddingVertical: 8,
     paddingHorizontal: 8,
-    paddingVertical: 7,
-    gap: 2,
+    gap: 3,
   },
-  metricValue: {
+  macroIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  macroValue: {
     fontSize: 12,
     fontWeight: "800",
   },
-  metricLabel: {
+  macroLabel: {
     fontSize: 11,
     color: palette.textMuted,
     fontWeight: "600",
@@ -336,6 +400,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: 12,
     gap: 10,
+    shadowColor: palette.shadow,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
   },
   foodTopRow: {
     flexDirection: "row",
@@ -349,8 +418,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   foodImage: {
-    width: 42,
-    height: 42,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     backgroundColor: palette.backgroundMuted,
   },
@@ -359,11 +428,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: palette.border,
-  },
-  imagePlaceholderText: {
-    color: palette.textMuted,
-    fontSize: 10,
-    fontWeight: "700",
   },
   foodTextWrap: {
     flex: 1,
@@ -391,16 +455,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
   },
+  foodMetricsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  foodMetricPill: {
+    borderRadius: radius.pill,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+  },
+  foodMetricGreen: {
+    backgroundColor: "#eaf8ef",
+    borderColor: "#b6e1c4",
+  },
+  foodMetricBlue: {
+    backgroundColor: "#edf3ff",
+    borderColor: "#c7d7ff",
+  },
+  foodMetricOrange: {
+    backgroundColor: "#fff6e9",
+    borderColor: "#f8dcb6",
+  },
+  foodMetricRed: {
+    backgroundColor: "#ffefef",
+    borderColor: "#f6c5c5",
+  },
+  foodMetricText: {
+    color: palette.text,
+    fontSize: 11,
+    fontWeight: "700",
+  },
   emptyCard: {
     backgroundColor: palette.surfaceSoft,
     borderWidth: 1,
     borderColor: palette.border,
     borderRadius: radius.lg,
     padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   emptyText: {
     color: palette.textMuted,
     fontSize: 13,
+    flex: 1,
   },
   deleteButton: {
     marginTop: 8,
@@ -409,6 +509,8 @@ const styles = StyleSheet.create({
     backgroundColor: palette.danger,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 7,
   },
   deleteButtonPressed: {
     opacity: 0.85,
@@ -436,6 +538,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingHorizontal: 16,
     paddingVertical: 10,
+  },
+  backListButtonPressed: {
+    backgroundColor: palette.primaryPressed,
   },
   backListButtonText: {
     color: "#ffffff",
