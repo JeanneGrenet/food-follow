@@ -52,6 +52,9 @@ export default function AddMealPage() {
       if (scannedFood) {
         addFoodToSelection(scannedFood);
         setScanMessage(`Aliment ajoute via scan: ${scannedFood.name}`);
+        setSearchText("");
+        setResults([]);
+        setSearchError(null);
       }
 
       return undefined;
@@ -98,8 +101,23 @@ export default function AddMealPage() {
   }, [searchText]);
 
   const onAddFood = (product: FoodProduct) => {
-    addFoodToSelection(mapFoodProductToFood(product));
-    setScanMessage(null);
+    const food = mapFoodProductToFood(product);
+    const alreadySelected = selectedFoods.some((item) => item.id === food.id);
+
+    if (alreadySelected) {
+      setScanMessage(`${food.name} est deja dans le repas.`);
+      setSearchText("");
+      setResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    addFoodToSelection(food);
+    setScanMessage(`Aliment ajoute: ${food.name}`);
+    setSearchText("");
+    setResults([]);
+    setSearchError(null);
+    setFormError(null);
   };
 
   const onRemoveFood = (foodId: string) => {
@@ -136,7 +154,10 @@ export default function AddMealPage() {
       style={styles.safeArea}
       edges={["top", "left", "right", "bottom"]}
     >
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text style={styles.title}>Ajouter un repas</Text>
 
         <View style={styles.section}>
