@@ -1,11 +1,47 @@
 import { useSignIn } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import type { EmailCodeFactor } from "@clerk/types";
 import { Link, useRouter } from "expo-router";
 import * as React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { palette, radius } from "../theme";
-import { Ionicons } from "@expo/vector-icons";
+
+type ClerkLikeError = {
+  errors?: Array<{
+    code?: string;
+    message?: string;
+    longMessage?: string;
+    meta?: { paramName?: string };
+  }>;
+};
+
+const getFirstClerkError = (error: unknown) => {
+  const clerkError = error as ClerkLikeError;
+  return clerkError.errors?.[0];
+};
+
+const getClerkMessage = (error: unknown, fallback: string) => {
+  const firstError = getFirstClerkError(error);
+  return firstError?.longMessage ?? firstError?.message ?? fallback;
+};
+
+const isPasswordError = (error: unknown) => {
+  const firstError = getFirstClerkError(error);
+  const code = firstError?.code?.toLowerCase() ?? "";
+  const paramName = firstError?.meta?.paramName?.toLowerCase();
+
+  return paramName === "password" || code.includes("password");
+};
 
 export default function Page() {
   const { signIn, setActive, isLoaded } = useSignIn();
@@ -15,9 +51,21 @@ export default function Page() {
   const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
   const [showEmailCode, setShowEmailCode] = React.useState(false);
+  const [passwordError, setPasswordError] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const onSignInPress = React.useCallback(async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || isSubmitting) return;
+
+    if (!password.trim()) {
+      setPasswordError("Saisis ton mot de passe.");
+      return;
+    }
+
+    setPasswordError(null);
+    setFormError(null);
+    setIsSubmitting(true);
 
     try {
       const signInAttempt = await signIn.create({
@@ -51,15 +99,31 @@ export default function Page() {
           setShowEmailCode(true);
         }
       } else {
-        console.error(JSON.stringify(signInAttempt, null, 2));
+        setFormError("Connexion incomplète. Réessaie.");
       }
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+    } catch (error) {
+      if (isPasswordError(error)) {
+        setPasswordError(
+          getClerkMessage(error, "Mot de passe incorrect. Réessaie.")
+        );
+      } else {
+        setFormError(
+          getClerkMessage(
+            error,
+            "Impossible de se connecter pour le moment. Réessaie."
+          )
+        );
+      }
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [isLoaded, signIn, setActive, router, emailAddress, password]);
+  }, [emailAddress, isLoaded, isSubmitting, password, router, setActive, signIn]);
 
   const onVerifyPress = React.useCallback(async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || isSubmitting) return;
+
+    setFormError(null);
+    setIsSubmitting(true);
 
     try {
       const signInAttempt = await signIn.attemptSecondFactor({
@@ -80,114 +144,152 @@ export default function Page() {
           },
         });
       } else {
-        console.error(JSON.stringify(signInAttempt, null, 2));
+        setFormError("Code invalide. Réessaie.");
       }
-    } catch (err) {
-      console.error(JSON.stringify(err, null, 2));
+    } catch (error) {
+      setFormError(getClerkMessage(error, "Code invalide. Réessaie."));
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [isLoaded, signIn, setActive, router, code]);
+  }, [code, isLoaded, isSubmitting, router, setActive, signIn]);
 
-  if (showEmailCode) {
-    return (
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={["top", "left", "right", "bottom"]}
-      >
-        <View style={styles.container}>
-          <View style={styles.brandTop}>
-            <View style={styles.brandIcon}>
-              <Text style={styles.brandIconText}>MAIL</Text>
-            </View>
-            <Text style={styles.brandTitle}>Vérification email</Text>
-            <Text style={styles.brandSubtitle}>
-              Saisis le code reçu pour finaliser la connexion.
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.label}>Code de vérification</Text>
-            <TextInput
-              style={styles.input}
-              value={code}
-              placeholder="Entrer le code"
-              placeholderTextColor={palette.textMuted}
-              onChangeText={(nextCode) => setCode(nextCode)}
-              keyboardType="numeric"
-            />
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.buttonPressed,
-              ]}
-              onPress={onVerifyPress}
-            >
-              <Text style={styles.buttonText}>Valider</Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+  const renderScreen = (content: React.ReactNode) => (
     <SafeAreaView
       style={styles.safeArea}
       edges={["top", "left", "right", "bottom"]}
     >
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={18}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>{content}</View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+
+  if (showEmailCode) {
+    return renderScreen(
+      <>
         <View style={styles.brandTop}>
           <View style={styles.brandIcon}>
-            <Ionicons name="leaf" size={22} color={palette.primary} />
+            <Text style={styles.brandIconText}>MAIL</Text>
           </View>
-          <Text style={styles.brandTitle}>Bon retour</Text>
+          <Text style={styles.brandTitle}>Vérification email</Text>
           <Text style={styles.brandSubtitle}>
-            Connecte-toi pour suivre tes repas et ton équilibre.
+            Saisis le code reçu pour finaliser la connexion.
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Code de vérification</Text>
           <TextInput
             style={styles.input}
-            autoCapitalize="none"
-            value={emailAddress}
-            placeholder="email@exemple.com"
+            value={code}
+            placeholder="Entrer le code"
             placeholderTextColor={palette.textMuted}
-            onChangeText={(nextEmail) => setEmailAddress(nextEmail)}
-            keyboardType="email-address"
+            onChangeText={(nextCode) => setCode(nextCode)}
+            keyboardType="numeric"
           />
 
-          <Text style={styles.label}>Mot de passe</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            placeholder="••••••••"
-            placeholderTextColor={palette.textMuted}
-            secureTextEntry
-            onChangeText={(nextPassword) => setPassword(nextPassword)}
-          />
+          {formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
 
           <Pressable
             style={({ pressed }) => [
               styles.button,
-              (!emailAddress || !password) && styles.buttonDisabled,
+              isSubmitting && styles.buttonDisabled,
               pressed && styles.buttonPressed,
             ]}
-            onPress={onSignInPress}
-            disabled={!emailAddress || !password}
+            onPress={onVerifyPress}
+            disabled={isSubmitting}
           >
-            <Text style={styles.buttonText}>Se connecter</Text>
+            <Text style={styles.buttonText}>Valider</Text>
           </Pressable>
+        </View>
+      </>
+    );
+  }
 
-          <View style={styles.linkContainer}>
-            <Text style={styles.linkLabel}>Pas encore de compte ?</Text>
-            <Link href="/sign-up" style={styles.linkText}>
-              Créer un compte
-            </Link>
-          </View>
+  return renderScreen(
+    <>
+      <View style={styles.brandTop}>
+        <View style={styles.brandIcon}>
+          <Ionicons name="leaf" size={22} color={palette.primary} />
+        </View>
+        <Text style={styles.brandTitle}>Bon retour</Text>
+        <Text style={styles.brandSubtitle}>
+          Connecte-toi pour suivre tes repas et ton équilibre.
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          autoCapitalize="none"
+          value={emailAddress}
+          placeholder="email@exemple.com"
+          placeholderTextColor={palette.textMuted}
+          onChangeText={(nextEmail) => {
+            setEmailAddress(nextEmail);
+            if (formError) {
+              setFormError(null);
+            }
+          }}
+          keyboardType="email-address"
+        />
+
+        <Text style={styles.label}>Mot de passe</Text>
+        <TextInput
+          style={[styles.input, passwordError && styles.inputError]}
+          value={password}
+          placeholder="••••••••"
+          placeholderTextColor={palette.textMuted}
+          secureTextEntry
+          onChangeText={(nextPassword) => {
+            setPassword(nextPassword);
+            if (passwordError) {
+              setPasswordError(null);
+            }
+            if (formError) {
+              setFormError(null);
+            }
+          }}
+        />
+
+        {passwordError ? (
+          <Text style={styles.passwordErrorText}>{passwordError}</Text>
+        ) : null}
+
+        {formError ? <Text style={styles.formErrorText}>{formError}</Text> : null}
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            (!emailAddress || !password || isSubmitting) && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={onSignInPress}
+          disabled={!emailAddress || !password || isSubmitting}
+        >
+          <Text style={styles.buttonText}>Se connecter</Text>
+        </Pressable>
+
+        <View style={styles.linkContainer}>
+          <Text style={styles.linkLabel}>Pas encore de compte ?</Text>
+          <Link href="/sign-up" style={styles.linkText}>
+            Créer un compte
+          </Link>
         </View>
       </View>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -196,10 +298,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.background,
   },
-  container: {
+  flex: {
     flex: 1,
-    padding: 16,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
+    padding: 16,
+  },
+  container: {
     gap: 14,
   },
   brandTop: {
@@ -254,6 +361,9 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surfaceSoft,
     color: palette.text,
   },
+  inputError: {
+    borderColor: palette.danger,
+  },
   button: {
     backgroundColor: palette.primary,
     height: 46,
@@ -272,6 +382,18 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "800",
     fontSize: 15,
+  },
+  passwordErrorText: {
+    color: palette.danger,
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: -4,
+  },
+  formErrorText: {
+    color: palette.danger,
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: -2,
   },
   linkContainer: {
     flexDirection: "row",
