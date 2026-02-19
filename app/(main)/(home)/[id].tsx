@@ -1,18 +1,27 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getMealCalories, type Food } from "../../models/meal";
 import { useMeals } from "../../state/meals-context";
+import { palette, radius } from "../../theme";
 
 const NUTRI_SCORE_COLORS: Record<string, string> = {
-  a: "#1f9d53",
-  b: "#7cc44f",
-  c: "#eab308",
-  d: "#f97316",
-  e: "#ef4444",
+  a: "#2f9e62",
+  b: "#6bbf59",
+  c: "#f4a340",
+  d: "#ef7e4a",
+  e: "#e64949",
 };
 
-const MetricBox = ({
+const MacroChip = ({
   label,
   value,
   color,
@@ -20,14 +29,17 @@ const MetricBox = ({
   label: string;
   value: string;
   color: string;
-}) => {
-  return (
-    <View style={[styles.metricBox, { borderColor: color }]}>
-      <Text style={[styles.metricValue, { color }]}>{value}</Text>
-      <Text style={styles.metricLabel}>{label}</Text>
-    </View>
-  );
-};
+}) => (
+  <View
+    style={[
+      styles.metricBox,
+      { borderColor: color + "60", backgroundColor: color + "12" },
+    ]}
+  >
+    <Text style={[styles.metricValue, { color }]}>{value}</Text>
+    <Text style={styles.metricLabel}>{label}</Text>
+  </View>
+);
 
 const FoodCard = ({ food }: { food: Food }) => {
   const nutriScore = (food.nutriscore || "e").toLowerCase();
@@ -40,11 +52,16 @@ const FoodCard = ({ food }: { food: Food }) => {
           {food.image_url ? (
             <Image source={{ uri: food.image_url }} style={styles.foodImage} />
           ) : (
-            <View style={[styles.foodImage, styles.foodImagePlaceholder]} />
+            <View style={[styles.foodImage, styles.foodImagePlaceholder]}>
+              <Text style={styles.imagePlaceholderText}>IMG</Text>
+            </View>
           )}
-          <View>
+
+          <View style={styles.foodTextWrap}>
             <Text style={styles.foodName}>{food.name}</Text>
-            <Text style={styles.foodBrand}>{food.brand || "Marque inconnue"}</Text>
+            <Text style={styles.foodBrand}>
+              {food.brand || "Marque inconnue"}
+            </Text>
           </View>
         </View>
 
@@ -54,10 +71,18 @@ const FoodCard = ({ food }: { food: Food }) => {
       </View>
 
       <View style={styles.metricsRow}>
-        <MetricBox label="Cal" value={`${food.calories} kcal`} color="#27ae60" />
-        <MetricBox label="Proteines" value={`${food.proteins} g`} color="#3b82f6" />
-        <MetricBox label="Glucides" value={`${food.carbs} g`} color="#f59e0b" />
-        <MetricBox label="Lipides" value={`${food.fats} g`} color="#ef4444" />
+        <MacroChip
+          label="Calories"
+          value={`${food.calories} kcal`}
+          color="#2f9e62"
+        />
+        <MacroChip
+          label="Protéines"
+          value={`${food.proteins} g`}
+          color="#2563eb"
+        />
+        <MacroChip label="Glucides" value={`${food.carbs} g`} color="#d97706" />
+        <MacroChip label="Lipides" value={`${food.fats} g`} color="#dc2626" />
       </View>
     </View>
   );
@@ -72,9 +97,18 @@ export default function MealDetailsPage() {
 
   if (!meal) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <View style={styles.container}>
-          <Text style={styles.title}>Repas introuvable</Text>
+      <SafeAreaView
+        style={styles.safeArea}
+        edges={["top", "left", "right", "bottom"]}
+      >
+        <View style={styles.notFoundWrap}>
+          <Text style={styles.notFoundTitle}>Repas introuvable</Text>
+          <Pressable
+            style={styles.backListButton}
+            onPress={() => router.replace("/(main)/(home)")}
+          >
+            <Text style={styles.backListButtonText}>Retour à mes repas</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -106,36 +140,75 @@ export default function MealDetailsPage() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>{"< Mes repas"}</Text>
+        <Pressable onPress={() => router.back()} style={styles.iconButton}>
+          <Text style={styles.iconButtonText}>{"<"}</Text>
         </Pressable>
+
         <Text style={styles.headerTitle}>Détail du repas</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.iconButtonGhost} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>{meal.name}</Text>
-        <Text style={styles.subtitle}>{meal.date}</Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.mealHeadCard}>
+          <Text style={styles.title}>{meal.name}</Text>
+          <Text style={styles.subtitle}>{meal.date}</Text>
+          <Text style={styles.totalKcal}>{getMealCalories(meal)} kcal</Text>
+        </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Total nutritionnel</Text>
           <View style={styles.metricsRow}>
-            <MetricBox label="Cal" value={`${getMealCalories(meal)} kcal`} color="#27ae60" />
-            <MetricBox label="Proteines" value={`${totals.proteins} g`} color="#3b82f6" />
-            <MetricBox label="Glucides" value={`${totals.carbs} g`} color="#f59e0b" />
-            <MetricBox label="Lipides" value={`${totals.fats} g`} color="#ef4444" />
+            <MacroChip
+              label="Calories"
+              value={`${totals.calories} kcal`}
+              color="#2f9e62"
+            />
+            <MacroChip
+              label="Protéines"
+              value={`${totals.proteins} g`}
+              color="#2563eb"
+            />
+            <MacroChip
+              label="Glucides"
+              value={`${totals.carbs} g`}
+              color="#d97706"
+            />
+            <MacroChip
+              label="Lipides"
+              value={`${totals.fats} g`}
+              color="#dc2626"
+            />
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Aliments ({meal.foods.length})</Text>
-        {meal.foods.map((food) => (
-          <FoodCard key={food.id} food={food} />
-        ))}
+        <View style={styles.listHeader}>
+          <Text style={styles.sectionTitle}>Aliments</Text>
+          <Text style={styles.sectionMeta}>{meal.foods.length} éléments</Text>
+        </View>
+
+        {meal.foods.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Text style={styles.emptyText}>
+              Ce repas ne contient pas encore d'aliments.
+            </Text>
+          </View>
+        ) : (
+          meal.foods.map((food) => <FoodCard key={food.id} food={food} />)
+        )}
 
         <Pressable
-          style={styles.deleteButton}
+          style={({ pressed }) => [
+            styles.deleteButton,
+            pressed && styles.deleteButtonPressed,
+          ]}
           onPress={onDeleteMeal}
         >
           <Text style={styles.deleteButtonText}>Supprimer ce repas</Text>
@@ -148,60 +221,91 @@ export default function MealDetailsPage() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f2f4f7",
+    backgroundColor: palette.background,
   },
   header: {
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
   },
-  backButton: {
-    minWidth: 84,
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
   },
-  backButtonText: {
-    fontSize: 13,
-    color: "#374151",
-    fontWeight: "600",
+  iconButtonText: {
+    color: palette.text,
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  iconButtonGhost: {
+    width: 34,
+    height: 34,
   },
   headerTitle: {
-    fontSize: 15,
+    color: palette.text,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
-  },
-  headerSpacer: {
-    minWidth: 84,
   },
   container: {
-    padding: 20,
+    padding: 16,
+    paddingBottom: 110,
     gap: 12,
-    paddingBottom: 28,
+  },
+  mealHeadCard: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: 16,
+    gap: 3,
   },
   title: {
-    fontSize: 30,
-    fontWeight: "700",
-    color: "#111827",
+    color: palette.text,
+    fontSize: 27,
+    fontWeight: "800",
   },
   subtitle: {
-    color: "#6b7280",
-    marginBottom: 6,
+    color: palette.textMuted,
+    fontSize: 13,
+  },
+  totalKcal: {
+    marginTop: 4,
+    color: palette.primary,
+    fontSize: 22,
+    fontWeight: "800",
   },
   sectionCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: palette.border,
     padding: 12,
-    gap: 10,
-    shadowColor: "#000000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    gap: 8,
   },
   sectionTitle: {
-    fontSize: 15,
+    color: palette.text,
+    fontSize: 16,
     fontWeight: "700",
-    color: "#111827",
+  },
+  sectionMeta: {
+    color: palette.textMuted,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  listHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 2,
   },
   metricsRow: {
     flexDirection: "row",
@@ -209,33 +313,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   metricBox: {
-    minWidth: 72,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    minWidth: 78,
     borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
+    borderRadius: radius.md,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    gap: 2,
   },
   metricValue: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
   },
   metricLabel: {
-    fontSize: 10,
-    color: "#9ca3af",
-    marginTop: 2,
+    fontSize: 11,
+    color: palette.textMuted,
+    fontWeight: "600",
   },
   foodCard: {
-    backgroundColor: "#ffffff",
-    borderRadius: 12,
+    backgroundColor: palette.surface,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: radius.lg,
     padding: 12,
     gap: 10,
-    shadowColor: "#000000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   foodTopRow: {
     flexDirection: "row",
@@ -246,45 +346,98 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
   },
   foodImage: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: palette.backgroundMuted,
   },
   foodImagePlaceholder: {
-    backgroundColor: "#dbeafe",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  imagePlaceholderText: {
+    color: palette.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  foodTextWrap: {
+    flex: 1,
   },
   foodName: {
-    fontSize: 16,
+    color: palette.text,
+    fontSize: 15,
     fontWeight: "700",
-    color: "#111827",
   },
   foodBrand: {
-    color: "#6b7280",
+    color: palette.textMuted,
     fontSize: 12,
+    marginTop: 1,
   },
   nutriBadge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 6,
-    justifyContent: "center",
+    minWidth: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: "center",
-    paddingHorizontal: 6,
+    justifyContent: "center",
+    paddingHorizontal: 8,
   },
   nutriBadgeText: {
     color: "#ffffff",
-    fontWeight: "700",
     fontSize: 12,
+    fontWeight: "800",
+  },
+  emptyCard: {
+    backgroundColor: palette.surfaceSoft,
+    borderWidth: 1,
+    borderColor: palette.border,
+    borderRadius: radius.lg,
+    padding: 14,
+  },
+  emptyText: {
+    color: palette.textMuted,
+    fontSize: 13,
   },
   deleteButton: {
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 14,
+    marginTop: 8,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: palette.danger,
     alignItems: "center",
-    backgroundColor: "#ef4444",
+    justifyContent: "center",
+  },
+  deleteButtonPressed: {
+    opacity: 0.85,
   },
   deleteButtonText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  notFoundWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    padding: 20,
+  },
+  notFoundTitle: {
+    color: palette.text,
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  backListButton: {
+    marginTop: 6,
+    backgroundColor: palette.primary,
+    borderRadius: radius.md,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  backListButtonText: {
     color: "#ffffff",
     fontWeight: "700",
   },
