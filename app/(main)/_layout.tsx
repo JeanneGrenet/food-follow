@@ -1,9 +1,29 @@
 import { useAuth } from "@clerk/clerk-expo";
-import { Redirect, Stack } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
+import { MealsProvider } from "../state/meals-context";
 export default function AuthRoutesLayout() {
-  const { isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
+
+  if (!isLoaded) {
+    return null;
+  }
+
   if (!isSignedIn) {
     return <Redirect href={"/sign-in"} />;
   }
-  return <Stack screenOptions={{ headerShown: false }} />;
+
+  return (
+    <MealsProvider>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: "#45b457",
+        }}
+      >
+        <Tabs.Screen name="(home)" options={{ title: "Repas" }} />
+        <Tabs.Screen name="add" options={{ title: "Ajouter" }} />
+        <Tabs.Screen name="profile" options={{ title: "Profil" }} />
+      </Tabs>
+    </MealsProvider>
+  );
 }
