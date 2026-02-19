@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/clerk-expo";
-import { Redirect, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { Redirect, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -17,24 +17,10 @@ import {
   type FoodProduct,
 } from "../../services/open-food-facts";
 import { useMeals } from "../../state/meals-context";
+import { consumePendingScannedFood } from "../../state/pending-scanned-food";
+import { mapFoodProductToFood } from "../../models/food-mapper";
 
 const MEAL_TYPES = ["Petit-dejeuner", "Dejeuner", "Diner", "Snack"] as const;
-
-const toFood = (product: FoodProduct): Food => {
-  const fallbackId = `${Date.now()}-${Math.random()}`;
-
-  return {
-    id: product.code || fallbackId,
-    name: product.name,
-    brand: product.brand ?? "",
-    image_url: product.imageUrl ?? "",
-    nutriscore: (product.nutriScoreGrade ?? "").toLowerCase(),
-    calories: product.nutriments.energyKcal100g ?? 0,
-    proteins: product.nutriments.proteins100g ?? 0,
-    carbs: product.nutriments.carbohydrates100g ?? 0,
-    fats: product.nutriments.fat100g ?? 0,
-  };
-};
 
 export default function AddMealPage() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -48,7 +34,29 @@ export default function AddMealPage() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedFoods, setSelectedFoods] = useState<Food[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const [scanMessage, setScanMessage] = useState<string | null>(null);
   const requestIdRef = useRef(0);
+
+  const addFoodToSelection = useCallback((food: Food) => {
+    setSelectedFoods((prev) => {
+      if (prev.some((item) => item.id === food.id)) {
+        return prev;
+      }
+      return [...prev, food];
+    });
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      const scannedFood = consumePendingScannedFood();
+      if (scannedFood) {
+        addFoodToSelection(scannedFood);
+        setScanMessage(`Aliment ajoute via scan: ${scannedFood.name}`);
+      }
+
+      return undefined;
+    }, [addFoodToSelection])
+  );
 
   useEffect(() => {
     const query = searchText.trim();
@@ -90,14 +98,8 @@ export default function AddMealPage() {
   }, [searchText]);
 
   const onAddFood = (product: FoodProduct) => {
-    const food = toFood(product);
-
-    setSelectedFoods((prev) => {
-      if (prev.some((item) => item.id === food.id)) {
-        return prev;
-      }
-      return [...prev, food];
-    });
+    addFoodToSelection(mapFoodProductToFood(product));
+    setScanMessage(null);
   };
 
   const onRemoveFood = (foodId: string) => {
@@ -118,7 +120,7 @@ export default function AddMealPage() {
     };
 
     addMeal(meal);
-    router.replace("/home");
+    router.replace("/(main)/(home)");
   };
 
   if (!isLoaded) {
@@ -177,9 +179,19 @@ export default function AddMealPage() {
           {isSearching ? (
             <ActivityIndicator size="small" color="#0a7ea4" />
           ) : null}
+          {scanMessage ? (
+            <Text style={styles.successText}>{scanMessage}</Text>
+          ) : null}
           {searchError ? (
             <Text style={styles.errorText}>{searchError}</Text>
           ) : null}
+
+          <Pressable
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push("/add/camera")}
+          >
+            <Text style={styles.buttonText}>Scanner un code-barres</Text>
+          </Pressable>
 
           {results.map((result) => (
             <Pressable
@@ -361,6 +373,10 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: "#dc2626",
+    fontSize: 13,
+  },
+  successText: {
+    color: "#15803d",
     fontSize: 13,
   },
 });
