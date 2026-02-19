@@ -1,10 +1,12 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MEALS } from "../data/meals";
 import { type Food, type Meal } from "../models/meal";
 
@@ -16,16 +18,65 @@ type MealsContextValue = {
 };
 
 const MealsContext = createContext<MealsContextValue | null>(null);
+const MEALS_STORAGE_KEY = "@food-follow/meals";
 
 export const MealsProvider = ({ children }: { children: ReactNode }) => {
   const [meals, setMeals] = useState<Meal[]>(MEALS);
 
+  const persistMeals = async (nextMeals: Meal[]) => {
+    try {
+      if (nextMeals.length === 0) {
+        await AsyncStorage.removeItem(MEALS_STORAGE_KEY);
+        return;
+      }
+
+      await AsyncStorage.setItem(MEALS_STORAGE_KEY, JSON.stringify(nextMeals));
+    } catch (error) {
+      console.error("Failed to save meals to storage", error);
+    }
+  };
+
+  const updateMeals = (updater: (prev: Meal[]) => Meal[]) => {
+    setMeals((prev) => {
+      const nextMeals = updater(prev);
+      void persistMeals(nextMeals);
+      return nextMeals;
+    });
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadMeals = async () => {
+      try {
+        const storedMeals = await AsyncStorage.getItem(MEALS_STORAGE_KEY);
+
+        if (!storedMeals) {
+          return;
+        }
+
+        const parsedMeals = JSON.parse(storedMeals) as Meal[];
+        if (Array.isArray(parsedMeals) && isMounted) {
+          setMeals(parsedMeals);
+        }
+      } catch (error) {
+        console.error("Failed to load meals from storage", error);
+      }
+    };
+
+    void loadMeals();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const addMeal = (meal: Meal) => {
-    setMeals((prev) => [meal, ...prev]);
+    updateMeals((prev) => [meal, ...prev]);
   };
 
   const addFoodToMeal = (mealId: string, food: Food) => {
-    setMeals((prev) =>
+    updateMeals((prev) =>
       prev.map((meal) =>
         meal.id === mealId ? { ...meal, foods: [...meal.foods, food] } : meal
       )
@@ -33,7 +84,7 @@ export const MealsProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeMeal = (mealId: string) => {
-    setMeals((prev) => prev.filter((meal) => meal.id !== mealId));
+    updateMeals((prev) => prev.filter((meal) => meal.id !== mealId));
   };
 
   const value = useMemo(
