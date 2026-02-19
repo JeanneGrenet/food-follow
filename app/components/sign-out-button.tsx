@@ -1,9 +1,9 @@
 import { useClerk } from "@clerk/clerk-expo";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text } from "react-native";
+import { palette, radius } from "../theme";
 
 export const SignOutButton = () => {
-  // Use `useClerk()` to access the `signOut()` function
   const { signOut } = useClerk();
   const router = useRouter();
 
@@ -12,8 +12,6 @@ export const SignOutButton = () => {
       await signOut();
       router.replace("/(auth)/sign-in");
     } catch (err) {
-      // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-      // for more info on error handling
       console.error(JSON.stringify(err, null, 2));
     }
   };
@@ -23,25 +21,28 @@ export const SignOutButton = () => {
       style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
       onPress={handleSignOut}
     >
-      <Text style={styles.buttonText}>Sign out</Text>
+      <Text style={styles.buttonText}>Se déconnecter</Text>
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#0a7ea4",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: palette.danger,
+    height: 46,
+    borderRadius: radius.md,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    flexDirection: "row",
     marginTop: 8,
   },
   buttonPressed: {
-    opacity: 0.7,
+    opacity: 0.85,
   },
   buttonText: {
-    color: "#fff",
-    fontWeight: "600",
+    color: "#ffffff",
+    fontWeight: "800",
+    fontSize: 14,
   },
 });

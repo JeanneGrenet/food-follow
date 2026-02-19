@@ -1,8 +1,10 @@
 import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import * as React from "react";
-import { Pressable, StyleSheet, TextInput, View, Text } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { palette, radius } from "../theme";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function Page() {
   const { isLoaded, signUp, setActive } = useSignUp();
@@ -13,49 +15,35 @@ export default function Page() {
   const [pendingVerification, setPendingVerification] = React.useState(false);
   const [code, setCode] = React.useState("");
 
-  // Handle submission of sign-up form
   const onSignUpPress = async () => {
     if (!isLoaded) return;
 
-    // Start sign-up process using email and password provided
     try {
       await signUp.create({
         emailAddress,
         password,
       });
 
-      // Send user an email with verification code
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-
-      // Set 'pendingVerification' to true to display second form
-      // and capture code
       setPendingVerification(true);
     } catch (err) {
-      // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-      // for more info on error handling
       console.error(JSON.stringify(err, null, 2));
     }
   };
 
-  // Handle submission of verification form
   const onVerifyPress = async () => {
     if (!isLoaded) return;
 
     try {
-      // Use the code the user provided to attempt verification
       const signUpAttempt = await signUp.attemptEmailAddressVerification({
         code,
       });
 
-      // If verification was completed, set the session to active
-      // and redirect the user
       if (signUpAttempt.status === "complete") {
         await setActive({
           session: signUpAttempt.createdSessionId,
           navigate: async ({ session }) => {
             if (session?.currentTask) {
-              // Handle pending session tasks
-              // See https://clerk.com/docs/guides/development/custom-flows/authentication/session-tasks
               console.log(session?.currentTask);
               return;
             }
@@ -64,13 +52,9 @@ export default function Page() {
           },
         });
       } else {
-        // If the status is not complete, check why. User may need to
-        // complete further steps.
         console.error(JSON.stringify(signUpAttempt, null, 2));
       }
     } catch (err) {
-      // See https://clerk.com/docs/guides/development/custom-flows/error-handling
-      // for more info on error handling
       console.error(JSON.stringify(err, null, 2));
     }
   };
@@ -82,27 +66,36 @@ export default function Page() {
         edges={["top", "left", "right", "bottom"]}
       >
         <View style={styles.container}>
-          <Text style={styles.title}>Verify your email</Text>
-          <Text style={styles.description}>
-            A verification code has been sent to your email.
-          </Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            placeholder="Enter your verification code"
-            placeholderTextColor="#666666"
-            onChangeText={(code) => setCode(code)}
-            keyboardType="numeric"
-          />
-          <Pressable
-            style={({ pressed }) => [
-              styles.button,
-              pressed && styles.buttonPressed,
-            ]}
-            onPress={onVerifyPress}
-          >
-            <Text style={styles.buttonText}>Verify</Text>
-          </Pressable>
+          <View style={styles.brandTop}>
+            <View style={styles.brandIcon}>
+              <Text style={styles.brandIconText}>MAIL</Text>
+            </View>
+            <Text style={styles.brandTitle}>Confirme ton email</Text>
+            <Text style={styles.brandSubtitle}>
+              Entre le code envoyé pour terminer l'inscription.
+            </Text>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.label}>Code de vérification</Text>
+            <TextInput
+              style={styles.input}
+              value={code}
+              placeholder="Entrer le code"
+              placeholderTextColor={palette.textMuted}
+              onChangeText={(nextCode) => setCode(nextCode)}
+              keyboardType="numeric"
+            />
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                pressed && styles.buttonPressed,
+              ]}
+              onPress={onVerifyPress}
+            >
+              <Text style={styles.buttonText}>Valider</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -114,42 +107,53 @@ export default function Page() {
       edges={["top", "left", "right", "bottom"]}
     >
       <View style={styles.container}>
-        <Text style={styles.title}>Sign up</Text>
-        <Text style={styles.label}>Email address</Text>
-        <TextInput
-          style={styles.input}
-          autoCapitalize="none"
-          value={emailAddress}
-          placeholder="Enter email"
-          placeholderTextColor="#666666"
-          onChangeText={(email) => setEmailAddress(email)}
-          keyboardType="email-address"
-        />
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          style={styles.input}
-          value={password}
-          placeholder="Enter password"
-          placeholderTextColor="#666666"
-          secureTextEntry={true}
-          onChangeText={(password) => setPassword(password)}
-        />
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            (!emailAddress || !password) && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={onSignUpPress}
-          disabled={!emailAddress || !password}
-        >
-          <Text style={styles.buttonText}>Continue</Text>
-        </Pressable>
-        <View style={styles.linkContainer}>
-          <Text>Have an account? </Text>
-          <Link href="/sign-in">
-            <Text>Sign in</Text>
-          </Link>
+        <View style={styles.brandTop}>
+          <View style={styles.brandIcon}>
+            <Ionicons name="leaf" size={22} color={palette.primary} />
+          </View>
+          <Text style={styles.brandTitle}>Créer un compte</Text>
+          <Text style={styles.brandSubtitle}>
+            Commence ton suivi bien-être en quelques secondes.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
+            autoCapitalize="none"
+            value={emailAddress}
+            placeholder="email@exemple.com"
+            placeholderTextColor={palette.textMuted}
+            onChangeText={(email) => setEmailAddress(email)}
+            keyboardType="email-address"
+          />
+          <Text style={styles.label}>Mot de passe</Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            placeholder="••••••••"
+            placeholderTextColor={palette.textMuted}
+            secureTextEntry
+            onChangeText={(nextPassword) => setPassword(nextPassword)}
+          />
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              (!emailAddress || !password) && styles.buttonDisabled,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={onSignUpPress}
+            disabled={!emailAddress || !password}
+          >
+            <Text style={styles.buttonText}>Créer mon compte</Text>
+          </Pressable>
+          <View style={styles.linkContainer}>
+            <Text style={styles.linkLabel}>Déjà inscrit ?</Text>
+            <Link href="/sign-in" style={styles.linkText}>
+              Se connecter
+            </Link>
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -159,55 +163,99 @@ export default function Page() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f2f4f7",
+    backgroundColor: palette.background,
   },
   container: {
     flex: 1,
-    padding: 20,
-    gap: 12,
+    padding: 16,
+    justifyContent: "center",
+    gap: 14,
   },
-  title: {
-    marginBottom: 8,
+  brandTop: {
+    alignItems: "center",
+    gap: 4,
   },
-  description: {
+  brandIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: palette.backgroundMuted,
+    borderWidth: 1,
+    borderColor: palette.border,
+  },
+  brandIconText: {
+    color: palette.primary,
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  brandTitle: {
+    color: palette.text,
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  brandSubtitle: {
+    color: palette.textMuted,
+    textAlign: "center",
     fontSize: 14,
-    marginBottom: 16,
-    opacity: 0.8,
+  },
+  card: {
+    backgroundColor: palette.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: palette.border,
+    padding: 16,
+    gap: 10,
   },
   label: {
-    fontWeight: "600",
-    fontSize: 14,
+    fontWeight: "700",
+    color: palette.text,
+    fontSize: 13,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: "#fff",
+    borderColor: palette.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 15,
+    backgroundColor: palette.surfaceSoft,
+    color: palette.text,
   },
   button: {
-    backgroundColor: "#0a7ea4",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: palette.primary,
+    height: 46,
+    borderRadius: radius.md,
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
+    marginTop: 6,
   },
   buttonPressed: {
-    opacity: 0.7,
+    backgroundColor: palette.primaryPressed,
   },
   buttonDisabled: {
-    opacity: 0.5,
+    opacity: 0.55,
   },
   buttonText: {
     color: "#fff",
-    fontWeight: "600",
+    fontWeight: "800",
+    fontSize: 15,
   },
   linkContainer: {
     flexDirection: "row",
-    gap: 4,
-    marginTop: 12,
+    gap: 6,
+    marginTop: 8,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  linkLabel: {
+    color: palette.textMuted,
+    fontSize: 13,
+  },
+  linkText: {
+    color: palette.accent,
+    fontWeight: "700",
+    fontSize: 13,
   },
 });
