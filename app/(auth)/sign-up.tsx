@@ -1,7 +1,16 @@
 import { useSignUp } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import * as React from "react";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { palette, radius } from "../theme";
 import { Ionicons } from "@expo/vector-icons";
@@ -59,104 +68,116 @@ export default function Page() {
     }
   };
 
-  if (pendingVerification) {
-    return (
-      <SafeAreaView
-        style={styles.safeArea}
-        edges={["top", "left", "right", "bottom"]}
-      >
-        <View style={styles.container}>
-          <View style={styles.brandTop}>
-            <View style={styles.brandIcon}>
-              <Text style={styles.brandIconText}>MAIL</Text>
-            </View>
-            <Text style={styles.brandTitle}>Confirme ton email</Text>
-            <Text style={styles.brandSubtitle}>
-              Entre le code envoyé pour terminer l'inscription.
-            </Text>
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.label}>Code de vérification</Text>
-            <TextInput
-              style={styles.input}
-              value={code}
-              placeholder="Entrer le code"
-              placeholderTextColor={palette.textMuted}
-              onChangeText={(nextCode) => setCode(nextCode)}
-              keyboardType="numeric"
-            />
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                pressed && styles.buttonPressed,
-              ]}
-              onPress={onVerifyPress}
-            >
-              <Text style={styles.buttonText}>Valider</Text>
-            </Pressable>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
+  const renderScreen = (content: React.ReactNode) => (
     <SafeAreaView
       style={styles.safeArea}
       edges={["top", "left", "right", "bottom"]}
     >
-      <View style={styles.container}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={18}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.container}>{content}</View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+
+  if (pendingVerification) {
+    return renderScreen(
+      <>
         <View style={styles.brandTop}>
           <View style={styles.brandIcon}>
-            <Ionicons name="leaf" size={22} color={palette.primary} />
+            <Text style={styles.brandIconText}>MAIL</Text>
           </View>
-          <Text style={styles.brandTitle}>Créer un compte</Text>
+          <Text style={styles.brandTitle}>Confirme ton email</Text>
           <Text style={styles.brandSubtitle}>
-            Commence ton suivi bien-être en quelques secondes.
+            Entre le code envoyé pour terminer l'inscription.
           </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.label}>Email</Text>
+          <Text style={styles.label}>Code de vérification</Text>
           <TextInput
             style={styles.input}
-            autoCapitalize="none"
-            value={emailAddress}
-            placeholder="email@exemple.com"
+            value={code}
+            placeholder="Entrer le code"
             placeholderTextColor={palette.textMuted}
-            onChangeText={(email) => setEmailAddress(email)}
-            keyboardType="email-address"
-          />
-          <Text style={styles.label}>Mot de passe</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            placeholder="••••••••"
-            placeholderTextColor={palette.textMuted}
-            secureTextEntry
-            onChangeText={(nextPassword) => setPassword(nextPassword)}
+            onChangeText={(nextCode) => setCode(nextCode)}
+            keyboardType="numeric"
           />
           <Pressable
             style={({ pressed }) => [
               styles.button,
-              (!emailAddress || !password) && styles.buttonDisabled,
               pressed && styles.buttonPressed,
             ]}
-            onPress={onSignUpPress}
-            disabled={!emailAddress || !password}
+            onPress={onVerifyPress}
           >
-            <Text style={styles.buttonText}>Créer mon compte</Text>
+            <Text style={styles.buttonText}>Valider</Text>
           </Pressable>
-          <View style={styles.linkContainer}>
-            <Text style={styles.linkLabel}>Déjà inscrit ?</Text>
-            <Link href="/sign-in" style={styles.linkText}>
-              Se connecter
-            </Link>
-          </View>
+        </View>
+      </>
+    );
+  }
+
+  return renderScreen(
+    <>
+      <View style={styles.brandTop}>
+        <View style={styles.brandIcon}>
+          <Ionicons name="leaf" size={22} color={palette.primary} />
+        </View>
+        <Text style={styles.brandTitle}>Créer un compte</Text>
+        <Text style={styles.brandSubtitle}>
+          Commence ton suivi bien-être en quelques secondes.
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.label}>Email</Text>
+        <TextInput
+          style={styles.input}
+          autoCapitalize="none"
+          value={emailAddress}
+          placeholder="email@exemple.com"
+          placeholderTextColor={palette.textMuted}
+          onChangeText={(email) => setEmailAddress(email)}
+          keyboardType="email-address"
+        />
+        <Text style={styles.label}>Mot de passe</Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          placeholder="••••••••"
+          placeholderTextColor={palette.textMuted}
+          secureTextEntry
+          onChangeText={(nextPassword) => setPassword(nextPassword)}
+        />
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            (!emailAddress || !password) && styles.buttonDisabled,
+            pressed && styles.buttonPressed,
+          ]}
+          onPress={onSignUpPress}
+          disabled={!emailAddress || !password}
+        >
+          <Text style={styles.buttonText}>Créer mon compte</Text>
+        </Pressable>
+        <View style={styles.linkContainer}>
+          <Text style={styles.linkLabel}>Déjà inscrit ?</Text>
+          <Link href="/sign-in" style={styles.linkText}>
+            Se connecter
+          </Link>
         </View>
       </View>
-    </SafeAreaView>
+    </>
   );
 }
 
@@ -165,10 +186,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: palette.background,
   },
-  container: {
+  flex: {
     flex: 1,
-    padding: 16,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "center",
+    padding: 16,
+  },
+  container: {
     gap: 14,
   },
   brandTop: {

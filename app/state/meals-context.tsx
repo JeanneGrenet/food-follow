@@ -7,7 +7,6 @@ import {
   type ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MEALS } from "../data/meals";
 import { type Food, type Meal } from "../models/meal";
 
 type MealsContextValue = {
@@ -21,7 +20,7 @@ const MealsContext = createContext<MealsContextValue | null>(null);
 const MEALS_STORAGE_KEY = "@food-follow/meals";
 
 export const MealsProvider = ({ children }: { children: ReactNode }) => {
-  const [meals, setMeals] = useState<Meal[]>(MEALS);
+  const [meals, setMeals] = useState<Meal[]>([]);
 
   const persistMeals = async (nextMeals: Meal[]) => {
     try {
@@ -92,7 +91,9 @@ export const MealsProvider = ({ children }: { children: ReactNode }) => {
     [meals]
   );
 
-  return <MealsContext.Provider value={value}>{children}</MealsContext.Provider>;
+  return (
+    <MealsContext.Provider value={value}>{children}</MealsContext.Provider>
+  );
 };
 
 export const useMeals = () => {

@@ -50,6 +50,18 @@ export default function AddMealPage() {
   const [scanMessage, setScanMessage] = useState<string | null>(null);
   const requestIdRef = useRef(0);
 
+  const resetForm = useCallback(() => {
+    requestIdRef.current += 1;
+    setMealType("Snack");
+    setSearchText("");
+    setResults([]);
+    setIsSearching(false);
+    setSearchError(null);
+    setSelectedFoods([]);
+    setFormError(null);
+    setScanMessage(null);
+  }, []);
+
   const addFoodToSelection = useCallback((food: Food) => {
     setSelectedFoods((prev) => {
       if (prev.some((item) => item.id === food.id)) {
@@ -151,6 +163,7 @@ export default function AddMealPage() {
     };
 
     addMeal(meal);
+    resetForm();
     router.replace("/(main)/(home)");
   };
 
