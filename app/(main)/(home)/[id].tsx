@@ -65,7 +65,7 @@ const FoodCard = ({ food }: { food: Food }) => {
 
 export default function MealDetailsPage() {
   const router = useRouter();
-  const { meals } = useMeals();
+  const { meals, removeMeal } = useMeals();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const mealId = Array.isArray(params.id) ? params.id[0] : params.id;
   const meal = meals.find((item) => item.id === mealId);
@@ -90,6 +90,20 @@ export default function MealDetailsPage() {
     },
     { calories: 0, proteins: 0, carbs: 0, fats: 0 }
   );
+
+  const onDeleteMeal = () => {
+    Alert.alert("Supprimer ce repas", "Confirmer la suppression ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Supprimer",
+        style: "destructive",
+        onPress: () => {
+          removeMeal(meal.id);
+          router.replace("/(main)/(home)");
+        },
+      },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right", "bottom"]}>
@@ -122,12 +136,7 @@ export default function MealDetailsPage() {
 
         <Pressable
           style={styles.deleteButton}
-          onPress={() =>
-            Alert.alert(
-              "Suppression",
-              "Le bouton est prêt. La suppression sera branchée sur la persistance au prochain palier."
-            )
-          }
+          onPress={onDeleteMeal}
         >
           <Text style={styles.deleteButtonText}>Supprimer ce repas</Text>
         </Pressable>

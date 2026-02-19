@@ -27,7 +27,7 @@ export default function AddCameraPage() {
   }
 
   if (!isSignedIn) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/sign-in" />;
   }
 
   const onBarcodeScanned = async ({ data }: { data: string }) => {

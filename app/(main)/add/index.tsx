@@ -128,7 +128,7 @@ export default function AddMealPage() {
   }
 
   if (!isSignedIn) {
-    return <Redirect href="/login" />;
+    return <Redirect href="/sign-in" />;
   }
 
   return (
